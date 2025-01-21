@@ -1,17 +1,78 @@
 # ProjecteReserves-API
-python -m venv .venv
+
+## Setup GIT
+Per penjar un projecte en el que ja tinguem les fonts en local.
+Podem crear un projecte buit en Git, !Sense Readme.me ni cap altre arxiu!
+Després anem a la carpeta del projecte i:
+
+```
+git init
+git config --global --add safe.directory '/mnt/9CB098F7B098D8DA/David/Institut TIC/Projecte/Reserva_Material/API_Reserves'
+git add .
+git remote add origin https://github.com/davidfs-itic/Projecte_API_Reserves.git
+git commit -m "first commit"
+git push -u origin main
+```
+
+## Setup projecte python
+```
+python3 -m venv .venv
 
 source .venv/bin/activate
 
 python -m pip install --upgrade pip
+```
 
-## Instal·lar dependèincies
-fastapi
-uvicorn
-mysql-connector-python
+### Instal·lar dependèincies
+Crear arxiu requirements.txt amb:
+    fastapi
+    uvicorn
+    mysql-connector-python
+```
+pip install --no-cache-dir -r requirements.txt
+```
 
+### Creacio certificats
+```
+openssl req -x509 -newkey rsa:4096 -keyout ./API/ssl/key.pem -out ./API/ssl/cert.pem -days 3650 -nodes
+```
+### Generar codi font amb la IA
+Demanar la generació de fastapi:
+Necessito un projecte en python amb fastapi, pero sense router, ni sqlalchemy. Només el módul fastapi i amb mariadb. les taules són aquestes i les relacions entre elles són aquestes.
+
+#### Estructura del projecte
+```
+project/
+│
+├── API/
+│   ├── main.py            # Fitxer principal de FastAPI
+│   ├── db.py              # Fitxer configuracio BBDD
+│   ├── models.py          # Fitxer classes ORM
+│   ├── requirements.txt   # Dependències de Python
+│   ├── Dockerfile         # Dockerfile per al servei FastAPI amb HTTPS
+│   ├── ssl/
+│   │   ├── cert.pem           # Certificat SSL
+│   │   ├── key.pem            # Clau privada SSL
+│   │
+├── docker-compose.yml     # Fitxer Docker Compose
+├── dockerfile             # Fitxer creacio imatge api
+```
+
+
+### Provar la api en local 
+Cal tenir alguna base de dades preparada, en local o en remot.
+```
+//Si estem en la carpeta del projecte
+uvicorn API.main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./API/ssl/key.pem --ssl-certfile ./API/ssl/cert.pem
+```
 
 ## Creació bbdd
+### Connexio a la base de dades 
+```
+mysql -u root -p -h 127.0.0.1 
+```
+
+### Script creació (demanar a la IA)
 ```
 create database reserves;
 
@@ -90,50 +151,21 @@ INSERT INTO reserves (idusuari, idmaterial, datareserva, datafinal) VALUES
 ```
 
 
-## Estructura del projecte
+
+
+# Creació de contenidors.
+El contenidor amb un servidor de bbdd ja està inclos en la imatge, però si voleu personalitzar, o afegir-ne més:
+
+## Creació Network per als contenidors
 ```
-project/
-│
-├── API/
-│   ├── main.py            # Fitxer principal de FastAPI
-│   ├── requirements.txt   # Dependències de Python
-│   ├── Dockerfile         # Dockerfile per al servei FastAPI amb HTTPS
-│   ├── ssl/
-│   │   ├── cert.pem           # Certificat SSL
-│   │   ├── key.pem            # Clau privada SSL
-│   │
-├── docker-compose.yml     # Fitxer Docker Compose
+docker network create -d bridge internal
 ```
 
-
-## Creacio certificats
+## Creació contenidor amb mariadb
 ```
-openssl req -x509 -newkey rsa:4096 -keyout ./API/ssl/key.pem -out ./API/ssl/cert.pem -days 3650 -nodes
+mkdir -p /opt/docker/mariadb/datadir
+docker create -p 3306:3306 --restart=unless-stopped --network=internal -v /opt/docker/mariadb/datadir:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=P@ssw0rd --name mariadb  mariadb:11.4 
 ```
-
-
-## Dockerfile:
-```
-FROM python:3.10-slim
-
-WORKDIR /app
-
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-# Assegurar que el certificat SSL estarà accessible
-RUN mkdir -p /ssl
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "443", "--ssl-keyfile", "/ssl/key.pem", "--ssl-certfile", "/ssl/cert.pem"]
-
-```
-## Creació contenidor:
-
-```
-docker build -t fastapi-mariadb-app .
-```
-
 
 ## Pujar fonts al servidor:
 scp -i ~/.ssh/vockey.pem  ./docker* ubuntu@daviditic.mooo.com:/opt/docker/reserves
@@ -144,10 +176,26 @@ scp ./docker* root@10.2.192.183:/opt/docker/reserves
 scp ./API/*.py ./API/*.txt root@10.2.192.183:/opt/docker/reserves/API
 scp ./API/ssl/* root@10.2.192.183:/opt/docker/reserves/API/ssl
 
-## Creació Network per als contenidors
-
-docker network create -d bridge internal
 
 
+## Creació contenidor amb Fastapi
+cd /opt/docker/reserves
+docker-compose up -d --build
 
-uvicorn main:app" --host 0.0.0.0 -reload --port 8443 --ssl-keyfile ./ssl/key.pem --ssl-certfile ./ssl/cert.pem
+## Eliminar i tornar a crear el contenidor amb noves fonts
+docker-compose down
+docker-compose up -d --build
+
+## Provar que funciona 
+https://ipserver:8443/docs
+
+# Altres contenidors:
+
+## Node Red
+mkdir -p /opt/docker/nodered/node1
+chown -R 1000:1000 /opt/docker/nodered/
+
+docker container create -p 1880:1880 -v /opt/docker/nodered/node1/:/data --restart=unless-stopped --network=internal --name node1 nodered/node-red:4.0.2-22
+docker start node1
+docker container list -a
+
