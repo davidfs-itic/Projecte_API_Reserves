@@ -1,14 +1,75 @@
 # ProjecteReserves-API
-python -m venv .venv
 
+## Setup GIT
+Per penjar un projecte en el que ja tinguem les fonts en local.
+Podem crear un projecte buit en Git, !Sense Readme.me ni cap altre arxiu!
+Després anem a la carpeta del projecte i:
+
+```
+git init
+git config --global --add safe.directory '/mnt/9CB098F7B098D8DA/David/Institut TIC/Projecte/Reserva_Material/API_Reserves'
+git add .
+git remote add origin https://github.com/davidfs-itic/Projecte_API_Reserves.git
+git commit -m "first commit"
+git push -u origin main
+```
+
+## Setup projecte python
+Des de la carpeta de projecte:
+```
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
+```
 
-## Instal·lar dependèincies
-fastapi
-uvicorn
-mysql-connector-python
+### Generar codi font amb la IA
+Demanar la generació de fastapi:
+Necessito un projecte en python amb fastapi, pero sense router, ni sqlalchemy. Només el módul fastapi i amb mariadb. les taules són aquestes i les relacions entre elles són aquestes.
 
+#### Estructura del projecte
+```
+project/
+│
+├── API/
+│   ├── main.py            # Fitxer principal de FastAPI
+│   ├── db.py              # Fitxer configuracio BBDD
+│   ├── models.py          # Fitxer classes ORM
+│   ├── requirements.txt   # Dependències de Python
+│   ├── Dockerfile         # Dockerfile per al servei FastAPI amb HTTPS
+│   ├── ssl/
+│   │   ├── cert.pem           # Certificat SSL
+│   │   ├── key.pem            # Clau privada SSL
+│   │
+├── docker-compose.yml     # Fitxer Docker Compose
+├── dockerfile             # Fitxer creacio imatge api
+```
+
+
+### Instal·lar dependèincies
+Crear arxiu requirements.txt amb:
+    fastapi
+    uvicorn
+    mysql-connector-python
+
+Instal·lar dependències:
+```
+pip install --no-cache-dir -r requirements.txt
+```
+
+### Creacio certificats
+```
+openssl req -x509 -newkey rsa:4096 -keyout ./API/ssl/key.pem -out ./API/ssl/cert.pem -days 3650 -nodes
+```
+
+
+
+### Provar la api en local 
+Cal tenir alguna base de dades preparada, en local o en remot.
+```
+//Si estem en la carpeta del projecte
+uvicorn API.main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./API/ssl/key.pem --ssl-certfile ./API/ssl/cert.pem
+uvicorn main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./ssl/key.pem --ssl-certfile ./ssl/cert.pem
+```
 
 ## Creació bbdd
 ### Connexio a la base de dades 
@@ -95,50 +156,65 @@ INSERT INTO reserves (idusuari, idmaterial, datareserva, datafinal) VALUES
 ```
 
 
-## Estructura del projecte
+# Instal·lació docker (si utilitzem un ubuntu sense configurar)
+Seguir instruccions a :
+https://docs.docker.com/engine/install/ubuntu/
+
+
+## Desinstalar altres versions:
 ```
-project/
-│
-├── API/
-│   ├── main.py            # Fitxer principal de FastAPI
-│   ├── requirements.txt   # Dependències de Python
-│   ├── Dockerfile         # Dockerfile per al servei FastAPI amb HTTPS
-│   ├── ssl/
-│   │   ├── cert.pem           # Certificat SSL
-│   │   ├── key.pem            # Clau privada SSL
-│   │
-├── docker-compose.yml     # Fitxer Docker Compose
+for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
 ```
 
+## Instal·lar apk
 
-## Creacio certificats
+1-Set up Docker's apt repository.
 ```
-openssl req -x509 -newkey rsa:4096 -keyout ./API/ssl/key.pem -out ./API/ssl/cert.pem -days 3650 -nodes
-```
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-
-## Dockerfile:
-```
-FROM python:3.10-slim
-
-WORKDIR /app
-
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-# Assegurar que el certificat SSL estarà accessible
-RUN mkdir -p /ssl
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "443", "--ssl-keyfile", "/ssl/key.pem", "--ssl-certfile", "/ssl/cert.pem"]
-
-```
-## Creació contenidor:
-
-```
-docker build -t fastapi-mariadb-app .
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
 ```
 
+2-Install the Docker packages.
+```
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+## Crear contenidor per base de dades:
+
+Client de mysql.
+
+apt install -y mariadb-client-core
+
+Preparar carpeta per base de dades:
+mkdir -p /opt/docker/mariadb/datadir 
+
+
+
+
+# Creació de contenidors.
+El contenidor amb un servidor de bbdd ja està inclos en la imatge, però si voleu personalitzar, o afegir-ne més:
+
+## Creació Network per als contenidors
+```
+docker network create -d bridge internal
+```
+
+## Creació contenidor amb mariadb
+```
+mkdir -p /opt/docker/mariadb/datadir
+docker create -p 3306:3306 --restart=unless-stopped --network=internal -v /opt/docker/mariadb/datadir:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=P@ssw0rd --name mariadb  mariadb:11.4 
+```
 
 ## Pujar fonts al servidor:
 scp -i ~/.ssh/vockey.pem  ./docker* ubuntu@daviditic.mooo.com:/opt/docker/reserves
