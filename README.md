@@ -15,27 +15,13 @@ git push -u origin main
 ```
 
 ## Setup projecte python
+Des de la carpeta de projecte:
 ```
 python3 -m venv .venv
-
 source .venv/bin/activate
-
 python -m pip install --upgrade pip
 ```
 
-### Instal·lar dependèincies
-Crear arxiu requirements.txt amb:
-    fastapi
-    uvicorn
-    mysql-connector-python
-```
-pip install --no-cache-dir -r requirements.txt
-```
-
-### Creacio certificats
-```
-openssl req -x509 -newkey rsa:4096 -keyout ./API/ssl/key.pem -out ./API/ssl/cert.pem -days 3650 -nodes
-```
 ### Generar codi font amb la IA
 Demanar la generació de fastapi:
 Necessito un projecte en python amb fastapi, pero sense router, ni sqlalchemy. Només el módul fastapi i amb mariadb. les taules són aquestes i les relacions entre elles són aquestes.
@@ -59,11 +45,30 @@ project/
 ```
 
 
+### Instal·lar dependèincies
+Crear arxiu requirements.txt amb:
+    fastapi
+    uvicorn
+    mysql-connector-python
+
+Instal·lar dependències:
+```
+pip install --no-cache-dir -r requirements.txt
+```
+
+### Creacio certificats
+```
+openssl req -x509 -newkey rsa:4096 -keyout ./API/ssl/key.pem -out ./API/ssl/cert.pem -days 3650 -nodes
+```
+
+
+
 ### Provar la api en local 
 Cal tenir alguna base de dades preparada, en local o en remot.
 ```
 //Si estem en la carpeta del projecte
 uvicorn API.main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./API/ssl/key.pem --ssl-certfile ./API/ssl/cert.pem
+uvicorn main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./ssl/key.pem --ssl-certfile ./ssl/cert.pem
 ```
 
 ## Creació bbdd
@@ -149,6 +154,50 @@ INSERT INTO reserves (idusuari, idmaterial, datareserva, datafinal) VALUES
 (1, 9, '2025-01-19', '2025-01-28'),
 (2, 10, '2025-01-20', '2025-01-29');
 ```
+
+
+# Instal·lació docker (si utilitzem un ubuntu sense configurar)
+Seguir instruccions a :
+https://docs.docker.com/engine/install/ubuntu/
+
+
+## Desinstalar altres versions:
+```
+for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+```
+
+## Instal·lar apk
+
+1-Set up Docker's apt repository.
+```
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+```
+
+2-Install the Docker packages.
+```
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+## Crear contenidor per base de dades:
+
+Client de mysql.
+
+apt install -y mariadb-client-core
+
+Preparar carpeta per base de dades:
+mkdir -p /opt/docker/mariadb/datadir 
 
 
 
