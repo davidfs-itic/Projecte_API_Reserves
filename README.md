@@ -216,35 +216,80 @@ mkdir -p /opt/docker/mariadb/datadir
 docker create -p 3306:3306 --restart=unless-stopped --network=internal -v /opt/docker/mariadb/datadir:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=P@ssw0rd --name mariadb  mariadb:11.4 
 ```
 
-## Pujar fonts al servidor:
+
+## Baixar fons des de git:
+git clone https://git........
+(Gràcies Èric)
+
+## Pujar fonts al servidor (si no les teniu al git)
+```
 scp -i ~/.ssh/vockey.pem  ./docker* ubuntu@daviditic.mooo.com:/opt/docker/reserves
 scp -i ~/.ssh/vockey.pem  ./API/*.py ./API/*.txt ubuntu@daviditic.mooo.com:/opt/docker/reserves/API
 scp -i ~/.ssh/vockey.pem  ./API/ssl/* ubuntu@daviditic.mooo.com:/opt/docker/reserves/API/ssl
-
-scp ./docker* root@10.2.192.183:/opt/docker/reserves
-scp ./API/*.py ./API/*.txt root@10.2.192.183:/opt/docker/reserves/API
-scp ./API/ssl/* root@10.2.192.183:/opt/docker/reserves/API/ssl
-
-
+```
 
 ## Creació contenidor amb Fastapi
+```
 cd /opt/docker/reserves
 docker-compose up -d --build
+```
 
 ## Eliminar i tornar a crear el contenidor amb noves fonts
+```
 docker-compose down
 docker-compose up -d --build
+```
 
 ## Provar que funciona 
-https://ipserver:8443/docs
+https://ipserver/docs
+
+## Si no funciona, comprovar els logs del contenidor
+```
+docker logs reservesapi
+```
 
 # Altres contenidors:
 
+## Servidor web
+
+Crear una carpeta en /opt/docker/
+per a que contingui els arxius del nostre webserver
+```
+mkdir -p /opt/docker/servidor_web/html
+```
+
+
+anar a la carpeta /opt/docker/servidorweb i crear l'arxiu docker-compose-yaml 
+```
+version: '3.8'
+
+services:
+  web:
+    image: httpd:2.4
+    container_name: servidor_web
+    ports:
+      - "80:80"
+    volumes:
+      - ./html:/usr/local/apache2/htdocs
+    restart: unless-stopped
+    networks:
+      - internal
+networks:
+  internal:
+    name: internal
+    external: true    
+```
+
+i des de la carpeta /opt/docker/servidorweb executar el docker-compose up -d 
+
 ## Node Red
+Aquest exemple no utilitza el docker-compose, sino que crea el contenidor directament
+
+```
 mkdir -p /opt/docker/nodered/node1
 chown -R 1000:1000 /opt/docker/nodered/
 
 docker container create -p 1880:1880 -v /opt/docker/nodered/node1/:/data --restart=unless-stopped --network=internal --name node1 nodered/node-red:4.0.2-22
 docker start node1
 docker container list -a
-
+```
