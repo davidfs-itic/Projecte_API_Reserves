@@ -259,7 +259,7 @@ mkdir -p /opt/docker/servidor_web/html
 ```
 
 
-anar a la carpeta /opt/docker/servidorweb i crear l'arxiu docker-compose-yaml 
+anar a la carpeta /opt/docker/servidorweb i crear l'arxiu docker-compose.yaml 
 ```
 version: '3.8'
 
@@ -283,7 +283,7 @@ networks:
 i des de la carpeta /opt/docker/servidorweb executar el docker-compose up -d 
 
 ## Node Red
-Aquest exemple no utilitza el docker-compose, sino que crea el contenidor directament
+Aquest exemple no utilitza el docker-compose, sino que crea el contenidor node-red directament
 
 ```
 mkdir -p /opt/docker/nodered/node1
