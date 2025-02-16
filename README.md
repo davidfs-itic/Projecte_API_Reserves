@@ -250,7 +250,7 @@ docker logs reservesapi
 
 # Altres contenidors:
 
-## Servidor web
+## Servidor web simple
 
 Crear una carpeta en /opt/docker/
 per a que contingui els arxius del nostre webserver
@@ -281,6 +281,50 @@ networks:
 ```
 
 i des de la carpeta /opt/docker/servidorweb executar el docker-compose up -d 
+
+
+
+## Servidor web amb configuracio i logs muntats en el sistema operatiu
+Crear carpetes per al servidor:
+```
+mkdir -p /opt/docker/servidor_web/{html,config,logs}
+```
+Arxiu docker-compose-yaml
+```
+echo "\
+version: '3.8'
+
+services:
+  web:
+    image: httpd:2.4
+    container_name: servidor_web
+    ports:
+      - "80:80"
+    volumes:
+      - ./html:/usr/local/apache2/htdocs
+      - ./logs:/usr/local/apache2/logs
+      - ./config/httpd.conf:/usr/local/apache2/conf/httpd.conf
+    restart: unless-stopped
+    networks:
+      - internal
+networks:
+  internal:
+    name: internal
+    external: true
+"|sudo tee /opt/docker/servidor_web/docker-compose.yaml
+```
+
+Obtenir un ariux de configuració de mostra:
+```
+docker run --rm httpd:2.4 cat /usr/local/apache2/conf/httpd.conf > /opt/docker/servidor_web/config/httpd.conf
+```
+
+Executar el sevidor web en la carpeta
+```
+cd /opt/docker/servidor_web
+docker-compose up -d
+```
+
 
 ## Node Red
 Aquest exemple no utilitza el docker-compose, sino que crea el contenidor node-red directament
