@@ -1,5 +1,17 @@
 # ProjecteReserves-API
 
+En aquest README, trobareu instruccions per instalar i fer el setup d'un projecte amb Fastapi (Reserves de material) i alguns subprojectes.
+
+
+* Setup GIT 
+  Com iniciar un projecte en github amb les fonts preexistents en local.
+* Setup projecte Python:
+  Creació de un virtual envirovment per instal·lar dependències
+* Generació de codi amb IA
+  Exemple de prompt per generar una api amb FastAPI
+* Creació 
+
+
 ## Setup GIT
 Per penjar un projecte en el que ja tinguem les fonts en local.
 Podem crear un projecte buit en Git, !Sense Readme.me ni cap altre arxiu!
@@ -35,7 +47,6 @@ project/
 │   ├── db.py              # Fitxer configuracio BBDD
 │   ├── models.py          # Fitxer classes ORM
 │   ├── requirements.txt   # Dependències de Python
-│   ├── Dockerfile         # Dockerfile per al servei FastAPI amb HTTPS
 │   ├── ssl/
 │   │   ├── cert.pem           # Certificat SSL
 │   │   ├── key.pem            # Clau privada SSL
@@ -61,23 +72,97 @@ pip install --no-cache-dir -r requirements.txt
 openssl req -x509 -newkey rsa:4096 -keyout ./API/ssl/key.pem -out ./API/ssl/cert.pem -days 3650 -nodes
 ```
 
-
-
 ### Provar la api en local 
-Cal tenir alguna base de dades preparada, en local o en remot.
+Cal tenir alguna base de dades preparada, en local o en remot. Vegeu com instal·lar un servidor de mariadb amb docker.
+
+
 ```
 //Si estem en la carpeta del projecte
 uvicorn API.main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./API/ssl/key.pem --ssl-certfile ./API/ssl/cert.pem
 uvicorn main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./ssl/key.pem --ssl-certfile ./ssl/cert.pem
 ```
 
-## Creació bbdd
+# Instal·lació docker (si utilitzem un ubuntu sense configurar)
+Seguir instruccions a :
+https://docs.docker.com/engine/install/ubuntu/
+
+
+## Creació Network per als contenidors
+```
+docker network create -d bridge xarxa_docker1
+```
+
+## Crear contenidor per base de dades:
+Preparar carpeta per base de dades:
+```
+mkdir -p /opt/docker/mariadb/datadir
+chown 1000:1000 /opt/docker/mariadb -R
+```
+
+>[!NOTE]
+> El chown es fa perque dins el contenidor, el procés de mysql es llença amb l'usuari 1000, i ha de tenir accés d'escriptura a la carpeta per poder inicialitzar la base de dades.
+
+## docker-compose.yaml 
+Amb aquest arxiu yaml, es crearà un servidor mysql 
+
+```
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: P@ssw0rd
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - xarxa1
+    ports:
+      - 3306:3306
+
+networks:
+  xarxa1:
+    name: xarxa_docker1
+    external: true
+
+
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/docker/mariadb/datadir
+```
+
 ### Connexio a la base de dades 
+
+Quan tinguem un servidor de mysql preparat, ens podem connectar d'aquesta manera:
+
+Instal·lem el client de mysql.
+```
+apt install -y mariadb-client-core
+```
+
+Ensn connectem al servidor
 ```
 mysql -u root -p -h 127.0.0.1 
 ```
 
+> [!IMPORTANT]
+> Si el servidor està instal·lat amb docker, hem de posar el modificador -h 127.0.0.1
+> Si no ho posem, no es connectarà per tcp, i buscara connectar-se per Unix Sockets.
+> Per Unix Sockets, només funciona si el servidor mysql o mariadb està instalat en el SO directament i no en un contenidor
+> Si el servidor està en un contenidor, l'arxiu .sock estarà ubicat dins el contenidor i no podrà ser accesible des de fora.
+
+
+
+
 ### Script creació (demanar a la IA)
+Si ja tenim a punt el servidor de bases de dades a punt, podrem executar els scripts de creació.
+
 ```
 create database reserves;
 
@@ -155,80 +240,25 @@ INSERT INTO reserves (idusuari, idmaterial, datareserva, datafinal) VALUES
 (2, 10, '2025-01-20', '2025-01-29');
 ```
 
-
-# Instal·lació docker (si utilitzem un ubuntu sense configurar)
-Seguir instruccions a :
-https://docs.docker.com/engine/install/ubuntu/
-
-
-## Desinstalar altres versions:
-```
-for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
-```
-
-## Instal·lar apk
-
-1-Set up Docker's apt repository.
-```
-# Add Docker's official GPG key:
-sudo apt-get update
-sudo apt-get install ca-certificates curl
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-
-# Add the repository to Apt sources:
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-```
-
-2-Install the Docker packages.
-```
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-```
-
-## Crear contenidor per base de dades:
-
-Client de mysql.
-
-apt install -y mariadb-client-core
-
-Preparar carpeta per base de dades:
-mkdir -p /opt/docker/mariadb/datadir 
-
-
-
-
-# Creació de contenidors.
-El contenidor amb un servidor de bbdd ja està inclos en la imatge, però si voleu personalitzar, o afegir-ne més:
-
-## Creació Network per als contenidors
-```
-docker network create -d bridge internal
-```
-
-## Creació contenidor amb mariadb
-```
-mkdir -p /opt/docker/mariadb/datadir
-docker create -p 3306:3306 --restart=unless-stopped --network=internal -v /opt/docker/mariadb/datadir:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=P@ssw0rd --name mariadb  mariadb:11.4 
-```
-
-
-## Baixar fons des de git:
-git clone https://git........
-(Gràcies Èric)
-
 ## Pujar fonts al servidor (si no les teniu al git)
+
+Per pujar arxius de l'ordinador local a un remot, es pot fer per ssh amb la comanda scp.
+
+Aqui hi ha alguns exemples de com funciona, concretament per pujar arxius de la nostra api 
+
 ```
-scp -i ~/.ssh/vockey.pem  ./docker* ubuntu@daviditic.mooo.com:/opt/docker/reserves
-scp -i ~/.ssh/vockey.pem  ./API/*.py ./API/*.txt ubuntu@daviditic.mooo.com:/opt/docker/reserves/API
-scp -i ~/.ssh/vockey.pem  ./API/ssl/* ubuntu@daviditic.mooo.com:/opt/docker/reserves/API/ssl
+scp -i ~/.ssh/vockey.pem  ./docker* ubuntu@11.22.33.44:/opt/docker/reserves
+scp -i ~/.ssh/vockey.pem  ./API/*.py ./API/*.txt ubuntu@11.22.33.44:/opt/docker/reserves/API
+scp -i ~/.ssh/vockey.pem  ./API/ssl/* ubuntu@11.22.33.44:/opt/docker/reserves/API/ssl
 ```
 
 ## Creació contenidor amb Fastapi
+Tenint en compte que ja tenim un dockerfile i un docker-compose, podem crear la imatge, el contenidor i engeger-ho amb docker-compose.
+
+L'arxiu **dockerfile** crea una imatge de docker amb les nostres fonts, a partir d'una imatge de python standard.
+
+L'arxiu **docker-compose** aixeca diferents contenidors, i defineix quins ports utilitzarà cadascún d'ells, a quina carpeta es guardaran les dades del contenidor (si cal), i a quina xarxa interna de docker es connectarà, per poder comunicar-se amb altres contenidors, sense necessàriament obrir un port en el SO amfitrió.
+
 ```
 cd /opt/docker/reserves
 docker-compose up -d --build
