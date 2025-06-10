@@ -6,9 +6,41 @@ from models import Usuari, Material, Reserva
 
 import time
 
+# OpenTelemetry imports
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 DELAY_TIME=3
 
+# Configure OpenTelemetry
+# Resource specifies information about the service
+resource = Resource.create(attributes={
+    "service.name": "reserves-api",
+    "service.version": "1.0.0",
+})
+
+# Set up a TracerProvider
+provider = TracerProvider(resource=resource)
+trace.set_tracer_provider(provider)
+
+# Configure OTLP exporter to send data to your collector
+# Assuming your collector is listening on default gRPC port 4317
+span_exporter = OTLPSpanExporter(endpoint="http://otel:4317", insecure=True) 
+# If your collector is on a different host/port, change 'localhost:4317' accordingly.
+# If you are using HTTPS, remove insecure=True and configure proper certificates.
+
+# Use a BatchSpanProcessor for efficiency
+span_processor = BatchSpanProcessor(span_exporter)
+provider.add_span_processor(span_processor)
+
 app = FastAPI()
+
+# Instrument your FastAPI app
+FastAPIInstrumentor.instrument_app(app)
 # Configura els origens permesos
 # origins = [
 #     "http://127.0.0.1:8443",  # Per React o altres frameworks en desenvolupament
