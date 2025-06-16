@@ -13,6 +13,9 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.dbapi import trace_integration
+import mysql.connector  # o l'adaptador que utilitzeu per a MariaDB
+
 
 DELAY_TIME=3
 
@@ -23,13 +26,18 @@ resource = Resource.create(attributes={
     "service.version": "1.0.0",
 })
 
+
 # Set up a TracerProvider
 provider = TracerProvider(resource=resource)
 trace.set_tracer_provider(provider)
-
+# Configuració després del tracer provider
+trace_integration(
+    connect_module=mysql.connector,
+    tracer_provider=provider
+)
 # Configure OTLP exporter to send data to your collector
 # Assuming your collector is listening on default gRPC port 4317
-span_exporter = OTLPSpanExporter(endpoint="http://otel:4317", insecure=True) 
+span_exporter = OTLPSpanExporter(endpoint="http://alloy:4317", insecure=True) 
 # If your collector is on a different host/port, change 'localhost:4317' accordingly.
 # If you are using HTTPS, remove insecure=True and configure proper certificates.
 
