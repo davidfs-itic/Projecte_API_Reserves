@@ -13,42 +13,35 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.dbapi import trace_integration
+from opentelemetry.instrumentation.mysql import MySQLInstrumentor
 import mysql.connector  # o l'adaptador que utilitzeu per a MariaDB
 
 
 DELAY_TIME=3
 
 # Configure OpenTelemetry
-# Resource specifies information about the service
+
+# 1. Configuració bàsica d'OpenTelemetry
 resource = Resource.create(attributes={
     "service.name": "reserves-api",
     "service.version": "1.0.0",
 })
 
-
-# Set up a TracerProvider
 provider = TracerProvider(resource=resource)
 trace.set_tracer_provider(provider)
-# Configuració després del tracer provider
-trace_integration(
-    connect_module=mysql.connector,
-    tracer_provider=provider
-)
-# Configure OTLP exporter to send data to your collector
-# Assuming your collector is listening on default gRPC port 4317
-span_exporter = OTLPSpanExporter(endpoint="http://alloy:4317", insecure=True) 
-# If your collector is on a different host/port, change 'localhost:4317' accordingly.
-# If you are using HTTPS, remove insecure=True and configure proper certificates.
 
-# Use a BatchSpanProcessor for efficiency
+# 2. Configura l'exportador (OTLP)
+span_exporter = OTLPSpanExporter(endpoint="http://alloy:4317", insecure=True)
 span_processor = BatchSpanProcessor(span_exporter)
 provider.add_span_processor(span_processor)
 
+# 3. Instrumenta FastAPI (primer)
 app = FastAPI()
-
-# Instrument your FastAPI app
 FastAPIInstrumentor.instrument_app(app)
+
+# 4. Instrumenta MySQL/MariaDB (després)
+MySQLInstrumentor().instrument(tracer_provider=provider)
+
 # Configura els origens permesos
 # origins = [
 #     "http://127.0.0.1:8443",  # Per React o altres frameworks en desenvolupament
