@@ -5,23 +5,29 @@ from models import Usuari, Material, Reserva
 # from fastapi.middleware.cors import CORSMiddleware
 
 import time
-
-# OpenTelemetry imports
+import logging
+# Import OpenTelemetry libraries
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter # Importa ConsoleSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.mysql import MySQLInstrumentor
-import mysql.connector  # o l'adaptador que utilitzeu per a MariaDB
+import mysql.connector
 
+
+# Habilitar el logging de OpenTelemetry
+logging.basicConfig(level=logging.DEBUG) # O logging.INFO, pero DEBUG será más detallado
+# Configurar loggers específicos de OpenTelemetry a DEBUG
+logging.getLogger("opentelemetry").setLevel(logging.DEBUG)
+logging.getLogger("opentelemetry.sdk").setLevel(logging.DEBUG)
+logging.getLogger("opentelemetry.sdk.trace").setLevel(logging.DEBUG)
+logging.getLogger("opentelemetry.instrumentation").setLevel(logging.DEBUG)
+logging.getLogger("opentelemetry.exporter").setLevel(logging.DEBUG)
 
 DELAY_TIME=3
-
 # Configure OpenTelemetry
-
-# 1. Configuració bàsica d'OpenTelemetry
 resource = Resource.create(attributes={
     "service.name": "reserves-api",
     "service.version": "1.0.0",
@@ -30,16 +36,22 @@ resource = Resource.create(attributes={
 provider = TracerProvider(resource=resource)
 trace.set_tracer_provider(provider)
 
-# 2. Configura l'exportador (OTLP)
-span_exporter = OTLPSpanExporter(endpoint="http://alloy:4317", insecure=True)
-span_processor = BatchSpanProcessor(span_exporter)
-provider.add_span_processor(span_processor)
+# 2. Configura los exportadores
+# Exportador OTLP (a Alloy)
+span_exporter_otlp = OTLPSpanExporter(endpoint="http://alloy:4317", insecure=True)
+span_processor_otlp = BatchSpanProcessor(span_exporter_otlp)
+provider.add_span_processor(span_processor_otlp)
+
+# Exportador de consola (para depuración local)
+span_exporter_console = ConsoleSpanExporter()
+span_processor_console = BatchSpanProcessor(span_exporter_console)
+provider.add_span_processor(span_processor_console) # Añade este procesador también
 
 # 3. Instrumenta FastAPI (primer)
 app = FastAPI()
 FastAPIInstrumentor.instrument_app(app)
 
-# 4. Instrumenta MySQL/MariaDB (després)
+# 4. Instrumenta MySQL/MariaDB (después)
 MySQLInstrumentor().instrument(tracer_provider=provider)
 
 # Configura els origens permesos
