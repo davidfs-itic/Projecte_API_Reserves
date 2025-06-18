@@ -13,7 +13,9 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter # Importa ConsoleSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.mysql import MySQLInstrumentor
+#from opentelemetry.instrumentation.mysql import MySQLInstrumentor
+from opentelemetry.instrumentation.pymysql import PyMySQLInstrumentor
+
 import mysql.connector
 
 
@@ -52,7 +54,8 @@ app = FastAPI()
 FastAPIInstrumentor.instrument_app(app)
 
 # 4. Instrumenta MySQL/MariaDB (después)
-MySQLInstrumentor().instrument(tracer_provider=provider)
+#MySQLInstrumentor().instrument(tracer_provider=provider)
+PyMySQLInstrumentor().instrument(tracer_provider=provider)
 
 # Configura els origens permesos
 # origins = [
