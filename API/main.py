@@ -50,7 +50,7 @@ provider.add_span_processor(span_processor_console)
 MySQLInstrumentor().instrument(
     tracer_provider=provider,
     # Dona error amb el comenter. per tant es deshabilita
-    enable_commenter=False
+    enable_commenter=False,
     commenter_options={}
 )
 
