@@ -29,7 +29,9 @@ logging.getLogger("opentelemetry.instrumentation").setLevel(logging.DEBUG)
 logging.getLogger("opentelemetry.exporter").setLevel(logging.DEBUG)
 
 DELAY_TIME=3
-# Configure OpenTelemetry
+
+
+# 1. Configure OpenTelemetry PRIMER (abans de qualsevol altra cosa)
 resource = Resource.create(attributes={
     "service.name": "reserves-api",
     "service.version": "1.0.0",
@@ -38,23 +40,31 @@ resource = Resource.create(attributes={
 provider = TracerProvider(resource=resource)
 trace.set_tracer_provider(provider)
 
-# 2. Configura los exportadores
-# Exportador OTLP (a Alloy)
+# 2. Configura els exportadors
 span_exporter_otlp = OTLPSpanExporter(endpoint="http://alloy:4317", insecure=True)
 span_processor_otlp = BatchSpanProcessor(span_exporter_otlp)
 provider.add_span_processor(span_processor_otlp)
 
-# Exportador de consola (para depuración local)
 span_exporter_console = ConsoleSpanExporter()
 span_processor_console = BatchSpanProcessor(span_exporter_console)
-provider.add_span_processor(span_processor_console) # Añade este procesador también
+provider.add_span_processor(span_processor_console)
 
-# 3. Instrumenta FastAPI (primer)
+# 3. Instrumenta MySQL ABANS de crear l'app i ABANS d'importar/usar mysql.connector
+MySQLInstrumentor().instrument(
+    tracer_provider=provider,
+    # Opcional: afegir més configuració
+    enable_commenter=True,
+    commenter_options={}
+)
+
+# 4. Crea l'app FastAPI
 app = FastAPI()
-FastAPIInstrumentor.instrument_app(app)
 
-# 4. Instrumenta MySQL/MariaDB (después)
-MySQLInstrumentor().instrument(tracer_provider=provider)
+# 5. Instrumenta FastAPI després de crear l'app
+FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
+
+
+
 #PyMySQLInstrumentor().instrument(tracer_provider=provider)
 
 # Configura els origens permesos
