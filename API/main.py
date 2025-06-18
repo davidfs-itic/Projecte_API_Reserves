@@ -14,9 +14,6 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.mysql import MySQLInstrumentor
-#from opentelemetry.instrumentation.pymysql import PyMySQLInstrumentor
-
-import mysql.connector
 
 
 # Habilitar el logging de OpenTelemetry
@@ -52,8 +49,8 @@ provider.add_span_processor(span_processor_console)
 # 3. Instrumenta MySQL ABANS de crear l'app i ABANS d'importar/usar mysql.connector
 MySQLInstrumentor().instrument(
     tracer_provider=provider,
-    # Opcional: afegir més configuració
-    enable_commenter=True,
+    # Dona error amb el comenter. per tant es deshabilita
+    enable_commenter=False
     commenter_options={}
 )
 
