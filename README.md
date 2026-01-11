@@ -5,14 +5,22 @@ En aquest README, trobareu instruccions per instalar i fer el setup d'un project
 
 * Setup GIT 
   Com iniciar un projecte en github amb les fonts preexistents en local.
+
 * Setup projecte Python:
   - Creació de un virtual envirovment per instal·lar dependències
   - Exemple de prompt per generar una api amb FastAPI
-* Creació 
 
+* Setup Servidor
+  - Instalació Contenidors ubuntu
+  - Setup Docker  en Ubuntu
+  - Creació d'un contenidor amb bases de dades
+
+* Annex Altres Contenidors: 
+  - Contenidor de BBDD
+  - Servidor Web Simple
 
 ## Setup GIT
-Per penjar un projecte en el que ja tinguem les fonts en local.
+Per penjar un projecte al git, en el que ja tinguem les fonts en local.
 Podem crear un projecte buit en Git, !Sense Readme.me ni cap altre arxiu!
 Després anem a la carpeta del projecte i:
 
@@ -35,7 +43,7 @@ python -m pip install --upgrade pip
 
 ### Generar codi font amb la IA
 Demanar la generació de fastapi:
-Necessito un projecte en python amb fastapi, pero sense router, ni sqlalchemy. Només el módul fastapi i amb mariadb. les taules són aquestes i les relacions entre elles són aquestes.
+Necessito un projecte en python amb fastapi, pero sense router, ni sqlalchemy. Només el módul fastapi i amb mariadb. les taules són aquestes i les relacions entre elles són aquestes:
 
 #### Estructura del projecte
 ```
@@ -81,17 +89,49 @@ uvicorn API.main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./API/ssl
 uvicorn main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./ssl/key.pem --ssl-certfile ./ssl/cert.pem
 ```
 
-# Instal·lació docker (si utilitzem un ubuntu sense configurar)
+# Instal·lació del servidor
+## Instal·lació docker (si utilitzem un ubuntu sense configurar)
 Seguir instruccions a :
 https://docs.docker.com/engine/install/ubuntu/
 
 
-## Creació Network per als contenidors
+### Creació Network per als contenidors
 ```
 docker network create -d bridge xarxa_docker1
 ```
 
-## Crear contenidor per base de dades:
+## Copiar arxius al servidor
+
+## Creació contenidor amb Fastapi
+Tenint en compte que ja tenim un dockerfile i un docker-compose, podem crear la imatge, el contenidor i engeger-ho amb docker-compose.
+
+L'arxiu **dockerfile** crea una imatge de docker amb les nostres fonts, a partir d'una imatge de python standard.
+
+L'arxiu **docker-compose** aixeca diferents contenidors, i defineix quins ports utilitzarà cadascún d'ells, a quina carpeta es guardaran les dades del contenidor (si cal), i a quina xarxa interna de docker es connectarà, per poder comunicar-se amb altres contenidors, sense necessàriament obrir un port en el SO amfitrió.
+
+```
+cd /opt/docker/reserves
+docker-compose up -d --build
+```
+
+## Eliminar i tornar a crear el contenidor amb noves fonts
+```
+docker-compose down
+docker-compose up -d --build
+```
+
+## Provar que funciona 
+https://ipserver/docs
+
+## Si no funciona, comprovar els logs del contenidor
+```
+docker logs reservesapi
+```
+
+# Altres contenidors:
+
+
+## 1. Contenidor de BBDD (mariadb):
 Preparar carpeta per base de dades:
 ```
 mkdir -p /opt/docker/mariadb/datadir
@@ -101,7 +141,8 @@ chown 1000:1000 /opt/docker/mariadb -R
 >[!NOTE]
 > El chown es fa perque dins el contenidor, el procés de mysql es llença amb l'usuari 1000, i ha de tenir accés d'escriptura a la carpeta per poder inicialitzar la base de dades.
 
-## docker-compose.yaml 
+
+### docker-compose.yaml 
 Amb aquest arxiu yaml, es crearà un servidor mysql 
 
 ```
@@ -160,7 +201,8 @@ mysql -u root -p -h 127.0.0.1
 
 
 ### Script creació (demanar a la IA)
-Si ja tenim a punt el servidor de bases de dades a punt, podrem executar els scripts de creació.
+Si ja tenim a punt el servidor de bases de dades, podrem executar els scripts de creació.
+Demaneu a alguna IA que us crei la base de dades amb alguns exemples.
 
 ```
 create database reserves;
@@ -239,45 +281,6 @@ INSERT INTO reserves (idusuari, idmaterial, datareserva, datafinal) VALUES
 (2, 10, '2025-01-20', '2025-01-29');
 ```
 
-## Pujar fonts al servidor (si no les teniu al git)
-
-Per pujar arxius de l'ordinador local a un remot, es pot fer per ssh amb la comanda scp.
-
-Aqui hi ha alguns exemples de com funciona, concretament per pujar arxius de la nostra api 
-
-```
-scp -i ~/.ssh/vockey.pem  ./docker* ubuntu@11.22.33.44:/opt/docker/reserves
-scp -i ~/.ssh/vockey.pem  ./API/*.py ./API/*.txt ubuntu@11.22.33.44:/opt/docker/reserves/API
-scp -i ~/.ssh/vockey.pem  ./API/ssl/* ubuntu@11.22.33.44:/opt/docker/reserves/API/ssl
-```
-
-## Creació contenidor amb Fastapi
-Tenint en compte que ja tenim un dockerfile i un docker-compose, podem crear la imatge, el contenidor i engeger-ho amb docker-compose.
-
-L'arxiu **dockerfile** crea una imatge de docker amb les nostres fonts, a partir d'una imatge de python standard.
-
-L'arxiu **docker-compose** aixeca diferents contenidors, i defineix quins ports utilitzarà cadascún d'ells, a quina carpeta es guardaran les dades del contenidor (si cal), i a quina xarxa interna de docker es connectarà, per poder comunicar-se amb altres contenidors, sense necessàriament obrir un port en el SO amfitrió.
-
-```
-cd /opt/docker/reserves
-docker-compose up -d --build
-```
-
-## Eliminar i tornar a crear el contenidor amb noves fonts
-```
-docker-compose down
-docker-compose up -d --build
-```
-
-## Provar que funciona 
-https://ipserver/docs
-
-## Si no funciona, comprovar els logs del contenidor
-```
-docker logs reservesapi
-```
-
-# Altres contenidors:
 
 ## Servidor web simple
 
