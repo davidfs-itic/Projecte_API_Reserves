@@ -1,10 +1,10 @@
-# ProjecteReserves-API
+# Projecte Reserves-API amb Contenidors
 
-En aquest README, trobareu instruccions per instalar i fer el setup d'un projecte amb Fastapi (Reserves de material) i alguns subprojectes.
+En aquest README, trobareu instruccions per instalar i fer el setup d'un projecte amb Fastapi (Reserves de material) així com alguns altres contenidors.
 
 
 * Setup GIT 
-  Com iniciar un projecte en github amb les fonts preexistents en local.
+  - Com iniciar un projecte en github amb les fonts preexistents en local.
 
 * Setup projecte Python:
   - Creació de un virtual envirovment per instal·lar dependències
@@ -12,12 +12,14 @@ En aquest README, trobareu instruccions per instalar i fer el setup d'un project
 
 * Setup Servidor
   - Instalació Contenidors ubuntu
-  - Setup Docker  en Ubuntu
+  - Copiar el codi font al server.
   - Creació d'un contenidor amb bases de dades
 
 * Annex Altres Contenidors: 
   - Contenidor de BBDD
   - Servidor Web Simple
+  - Servidor web amb configuracio i logs muntats en el sistema operatiu
+  - Node-Red
 
 ## Setup GIT
 Per penjar un projecte al git, en el que ja tinguem les fonts en local.
@@ -90,29 +92,63 @@ uvicorn main:app --host 0.0.0.0 --reload --port 8443 --ssl-keyfile ./ssl/key.pem
 ```
 
 # Instal·lació del servidor
+
+Assegureu-vos que teniu accés al servidor a través de ssh. 
+Quan heu creat el servidor:
+  - Si es en AWS, el la pantalla en què inicieu el laboratori, hi teniu les claus.
+  - Si és en Oracle, les claus les heu generades vosaltres i heu enganxat la clau pública en el moment de crear la instància.
+
+
 ## Instal·lació docker (si utilitzem un ubuntu sense configurar)
 Seguir instruccions a :
 https://docs.docker.com/engine/install/ubuntu/
 
 
-### Creació Network per als contenidors
+### Creació Xarxa per als contenidors
+
+Docker té el concepte de Xarxa Virtual, semblant a un nat network de virtualbox.
+
+Dins de la xarxa virtual, tots els contenidors tenen assignada una ip, i es poden comunicar entre ells.
+
+> [!IMPORTANT]  
+> Els contenidors entre ells, no necessiten normalment saber les serves ips internes de la xarxa virtual en la que estan connectats, doncs amb el nom del contenidor, docker resol la ip (com si tingués incorporat un servidor DNS).
+> 
+> Per exemple, si tenim dos contenidors, un anomenat **api** i un anomenat **mariadb**, des del contenidor api podriem fer: "ping mariadb" i docker resoldrà per nosaltres la ip.
+
+Per crear una xarxa en docker manualment:
+
 ```
 docker network create -d bridge xarxa_docker1
 ```
 
-## Copiar arxius al servidor
+Després ja es configura la xarxa en la creació del contenidor (en el docker-compose) 
+
+
+## Copiar el codi font al server.
+
+Per copiar el codi font al server, només heu de fer un **git clone** del vostre repositori. Si el teniu ben estructurat, segons l'estructura proposada, tindreu el codi font en una carpeta anomenada API.
+
+Caldrà fer els arxius [dockerfile](./dockerfile) i el [docker compose](./docker-compose.yaml) (Vegeu el següent punt)
+
+Per a què funcioni, necessiteu que el [contenidor de bases de dades](#1-contenidor-de-bbdd-mariadb) també estigui funcionant, i preferiblement, que els contenidors estiguin en la matexia xarxa [(xarxa_docker1 en l'exemple)](#creació-xarxa-per-als-contenidors)
+
 
 ## Creació contenidor amb Fastapi
 Tenint en compte que ja tenim un dockerfile i un docker-compose, podem crear la imatge, el contenidor i engeger-ho amb docker-compose.
 
-L'arxiu **dockerfile** crea una imatge de docker amb les nostres fonts, a partir d'una imatge de python standard.
+L'arxiu [**dockerfile**](./dockerfile) crea una imatge de docker amb les nostres fonts, a partir d'una imatge de python standard.
 
-L'arxiu **docker-compose** aixeca diferents contenidors, i defineix quins ports utilitzarà cadascún d'ells, a quina carpeta es guardaran les dades del contenidor (si cal), i a quina xarxa interna de docker es connectarà, per poder comunicar-se amb altres contenidors, sense necessàriament obrir un port en el SO amfitrió.
+L'arxiu [**docker-compose**](./docker-compose.yaml) aixeca diferents contenidors, i defineix quins ports utilitzarà cadascún d'ells, a quina carpeta es guardaran les dades del contenidor (si cal), i a quina xarxa interna de docker es connectarà, per poder comunicar-se amb altres contenidors, sense necessàriament obrir un port en el SO amfitrió.
 
+Un cop teniu els arxius únicament cal fer el **compose up**
 ```
 cd /opt/docker/reserves
 docker-compose up -d --build
 ```
+>[!IMPORTANT]
+> El modificador --build serveix per a que torni a crear la imatge amb les noves fonts, cada vegada que modifiqueu el codi font.
+
+
 
 ## Eliminar i tornar a crear el contenidor amb noves fonts
 ```
@@ -127,6 +163,12 @@ https://ipserver/docs
 ```
 docker logs reservesapi
 ```
+
+>[!TIP]
+> Els errors més freqüents són: 
+> - No troba la base de dades..
+> - El firewall del servidor (o de la infraestructura) està bloquejant les peticions. Caldrà obrir els ports necessàris (8000 en el cas de la fast api) 
+
 
 # Altres contenidors:
 
@@ -370,318 +412,3 @@ docker start node1
 docker container list -a
 ```
 
-
-## Grafana
-
-```
-version: '3.8'
-
-services:
-  grafana:
-    image: grafana/grafana-oss:12.0.1 # Utilitzem la imatge oficial de Grafana
-    container_name: grafana
-    restart: unless-stopped # Assegura que Grafana es reinicia automàticament
-    ports:
-      - "3000:3000" # Mapeja el port 3000 del host al port 3000 del contenidor (port per defecte de Grafana)
-    volumes:
-      - /opt/docker/grafana:/var/lib/grafana # Mapeja el volum local a la ruta de dades de Grafana
-    environment:
-      # Configuració opcional: pots canviar el password de l'admin inicial
-      # - GF_SECURITY_ADMIN_USER=admin
-      # - GF_SECURITY_ADMIN_PASSWORD=your_secure_password
-      # Si no els configures, l'usuari/password per defecte serà admin/admin
-      - GF_PLUGINS_PREINSTALL=grafana-clock-panel
-    networks:
-      - internal # Connecta Grafana a la xarxa 'internal' que hem definit com a externa
-
-networks:
-  internal:
-    name: xarxa_docker1 # Aquest és el nom de la xarxa que ja tens creada
-    external: true # Indica que aquesta xarxa ja existeix i no ha de ser creada/eliminada per Compose
-```
-
-## Influxdb2  i Telegraf
-
-```
-sudo mkdir -p /opt/docker/influxdb/data
-# No cal una carpeta específica per a Telegraf si només guarda la configuració en un volum.
-# Però necessitaràs una carpeta per al fitxer de configuració de Telegraf al host.
-sudo mkdir -p /opt/docker/telegraf/config
-sudo chmod -R 777 /opt/docker/influxdb /opt/docker/telegraf # Ajusta permisos
-```
-
-### influxdb
-```
-version: '3.8'
-
-services:
-  influxdb:
-    image: influxdb:2.7 # Utilitzem una versió estable d'InfluxDB 2.x
-    container_name: influxdb # Nom del contenidor
-    restart: unless-stopped # Assegura que InfluxDB es reinicia automàticament
-    ports:
-      - "8086:8086" # Mapeja el port 8086 del host al port 8086 del contenidor (port per defecte d'InfluxDB UI/API)
-    volumes:
-      - /opt/docker/influxdb/data:/var/lib/influxdb2 # Volum per a les dades persistents d'InfluxDB
-      # - /opt/docker/influxdb/config:/etc/influxdb2 # Volum opcional per a fitxers de configuració personalitzats
-    environment:
-      # Configuració inicial obligatòria per a InfluxDB 2.x quan s'inicia per primera vegada
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin # Nom d'usuari per defecte
-      - DOCKER_INFLUXDB_INIT_PASSWORD=1357924680 # La contrasenya que heu especificat
-      - DOCKER_INFLUXDB_INIT_ORG=Itic # Nom de l'organització per defecte
-      - DOCKER_INFLUXDB_INIT_BUCKET=bucket1 # Nom del bucket de dades per defecte
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=dshdifuhb9733011237ewfdifnfldksaodhwieugfas # ATENCIÓ: Guardeu aquest token! El necessitareu per accedir a l'API o connectar Grafana.
-    networks:
-      - internal # Connecta InfluxDB a la xarxa definida com a 'internal'
-
-networks:
-  internal:
-    name: xarxa_docker1 # Aquest és el nom real de la xarxa que ja heu creat (amb `docker network create -d bridge xarxa_docker1`)
-    external: true # Indica a Docker Compose que aquesta xarxa ja existeix i no ha de ser gestionada per ell
-
-```
-### telegraf
-
-Fitxer configuració:
-
-```
-# /opt/docker/telegraf/config/telegraf.conf
-
-[global_tags]
-  # Pots afegir tags globals a totes les mètriques, per exemple, el nom del host
-  host = "$HOSTNAME" # Telegraf agafarà el hostname del contenidor, que pot ser útil
-  # Alternativament, si vols el nom del host real, pots fer-ho així (requereix env var)
-  # host = "${HOST_REAL_HOSTNAME}" 
-
-[agent]
-  interval = "10s"
-  round_interval = true
-  metric_batch_size = 1000
-  metric_buffer_limit = 10000
-  collection_jitter = "0s"
-  flush_interval = "10s"
-  flush_jitter = "0s"
-  precision = ""
-  hostname = "" ## Si deixes buit, utilitza el hostname del contenidor.
-                  ## Pots posar-hi "${HOST_REAL_HOSTNAME}" si passes la variable d'entorn.
-  omit_hostname = false
-
-###############################################################################
-#                            OUTPUT PLUGINS                                   #
-###############################################################################
-
-[[outputs.influxdb_v2]]
-  urls = ["http://influxdb:8086"] # Adreça d'InfluxDB a la mateixa xarxa de Docker Compose
-  token = "dshdifuhb9733011237ewfdifnfldksaodhwieugfas" # IMPORTANT: Usa el mateix token que vas definir per a InfluxDB
-  organization = "Itic"
-  #bucket = "bucket1"
-  ## Descomenta la línia següent per enviar totes les mètriques a un bucket específic de Telegraf
-  bucket = "telegraf" 
-  timeout = "5s"
-
-###############################################################################
-#                            INPUT PLUGINS                                    #
-###############################################################################
-
-# Mètriques de CPU del host
-[[inputs.cpu]]
-  percpu = true
-  totalcpu = true
-  collect_cpu_time = false
-  report_active = false
-  ## IMPORTANT: Per a monitoritzar el host des d'un contenidor,
-  ## calen aquestes variables d'entorn al contenidor de Telegraf
-  ## HOST_PROC=/hostfs/proc i HOST_SYS=/hostfs/sys
-  
-# Mètriques de memòria del host
-[[inputs.mem]]
-  ## HOST_PROC=/hostfs/proc
-
-# Mètriques de la càrrega del sistema
-[[inputs.system]]
-  ## HOST_PROC=/hostfs/proc
-  ## HOST_SYS=/hostfs/sys
-
-# Mètriques d'ús del disc del host
-[[inputs.disk]]
-  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "overlay", "aufs", "squashfs"]
-  mount_points = ["/hostfs"] # Telegraf buscarà els punts de muntatge a /hostfs dins del contenidor
-  ## HOST_PROC=/hostfs/proc
-  ## HOST_SYS=/hostfs/sys
-
-# Mètriques d'I/O del disc del host
-[[inputs.diskio]]
-  ## HOST_PROC=/hostfs/proc
-  ## HOST_SYS=/hostfs/sys
-
-# Mètriques de xarxa del host
-[[inputs.net]]
-  interfaces = ["eth0", "lo"] # O les interfícies que vulguis monitoritzar
-  ## HOST_PROC=/hostfs/proc
-  ## HOST_SYS=/hostfs/sys
-
-# Mètriques del procés de Docker (si vols monitoritzar el propi daemon de Docker)
-# Necessita accés al socket de Docker
-# Read metrics about docker containers
-[[inputs.docker]]
-  ## Docker Endpoint
-  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
-  endpoint = "unix:///var/run/docker.sock"
-
-  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
-  ## Note: configure this in one of the manager nodes in a Swarm cluster.
-  ## configuring in multiple Swarm managers results in duplication of metrics.
-  gather_services = false
-
-  ## Only collect metrics for these containers. Values will be appended to
-  ## container_name_include.
-  ## Deprecated (1.4.0), use container_name_include
-  container_names = []
-
-  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
-  source_tag = false
-
-  ## Containers to include and exclude. Collect all if empty. Globs accepted.
-  container_name_include = []
-  container_name_exclude = []
-
-  ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
-  ## example: container_state_include = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  ## example: container_state_exclude = ["created", "restarting", "running", "removing", "paused", "exited", "dead"]
-  # container_state_include = []
-  # container_state_exclude = []
-
-  ## Objects to include for disk usage query
-  ## Allowed values are "container", "image", "volume" 
-  ## When empty disk usage is excluded
-  storage_objects = []
-
-  ## Timeout for docker list, info, and stats commands
-  timeout = "5s"
-
-  ## Specifies for which classes a per-device metric should be issued
-  ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
-  ## Please note that this setting has no effect if 'perdevice' is set to 'true'
-  # perdevice_include = ["cpu"]
-
-  ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
-  ## Possible values are 'cpu', 'blkio' and 'network'
-  ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
-  ## Please note that this setting has no effect if 'total' is set to 'false'
-  # total_include = ["cpu", "blkio", "network"]
-
-  ## docker labels to include and exclude as tags.  Globs accepted.
-  ## Note that an empty array for both will include all labels as tags
-  docker_label_include = []
-  docker_label_exclude = []
-
-  ## Which environment variables should we use as a tag
-  tag_env = ["JAVA_HOME", "HEAP_SIZE"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-```
-
-Fitxer docker-compose
-```
-# telegraf_stack/docker-compose.yml
-version: '3.8'
-
-services:
-  telegraf:
-    image: telegraf:1.34.4-alpine
-    container_name: telegraf
-    restart: unless-stopped
-    volumes:
-      # Muntar el fitxer de configuració de Telegraf
-      - ./config/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      # Muntar les rutes del host que Telegraf necessita
-      - /etc:/hostfs/etc:ro
-      - /proc:/hostfs/proc:ro
-      - /sys:/hostfs/sys:ro
-      - /var/run/utmp:/var/run/utmp:ro
-      # - /var:/hostfs/var:ro # Si necessites més mètriques
-    environment:
-      # Variables d'entorn per indicar a Telegraf on trobar els fitxers del host
-      - HOST_ETC=/hostfs/etc
-      - HOST_PROC=/hostfs/proc
-      - HOST_SYS=/hostfs/sys
-      - HOST_RUN=/hostfs/run
-      - HOST_MOUNT_PREFIX=/hostfs
-      - HOST_REAL_HOSTNAME=${HOSTNAME} # O el nom que vulguis per al host
-    networks:
-      - internal # Connecta Telegraf a la xarxa externa
-
-networks:
-  internal:
-    name: xarxa_docker1 # El nom de la xarxa que ja has creat i on InfluxDB està connectat
-    external: true # Indica a Docker Compose que aquesta xarxa ja existeix
-```
-
-## Instalacio OpenTelemetry collection_jitter
-
-Arxiu configuració:
-
-```
-# collector-config.yaml
-receivers:
-  otlp:
-    protocols:
-      grpc: # Puerto por defecto 4317 para gRPC
-      http: # Puerto por defecto 4318 para HTTP
-
-processors:
-  batch:
-    send_batch_size: 1000
-    timeout: 1s
- 
-exporters:
-  influxdb:
-    endpoint: "http://influxdb:8086" # <-- ¡Importante! Si InfluxDB también está en Docker, usa el nombre del servicio
-    org: "Itic"
-    bucket: "telemetry"
-    token: "dshdifuhb9733011237ewfdifnfldksaodhwieugfas"
-    metrics_schema: "telegraf-prometheus-v2"
-
-service:
-  pipelines:
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [influxdb]
-    # Si vas a usar trazas, necesitarás configurar un exportador como Jaeger o Tempo aquí:
-    # traces:
-    #   receivers: [otlp]
-    #   processors: [batch]
-    #   exporters: [jaeger] # o [tempo]
-    # logs:
-    #   receivers: [otlp]
-    #   processors: [batch]
-    #   exporters: [loki] # o similar
-```    
-
-Docker compose 
-
-```
-version: '3.8'
-
-services:
-  otel:
-    image: otel/opentelemetry-collector-contrib:0.128.0
-    container_name: otel
-    command: ["--config=/etc/otelcol/config.yaml"]
-    volumes:
-      - ./config/collector-config.yaml:/etc/otelcol/config.yaml # Monta tu archivo de configuración
-    ports:
-      - "4317:4317" # Puerto gRPC para OTLP
-      - "4318:4318" # Puerto HTTP para OTLP
-      - "8888:8888" # Puerto para el endpoint de estado/healthcheck del Collector (opcional)
-  
-```
