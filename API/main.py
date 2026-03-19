@@ -1,7 +1,7 @@
 #https://fastapi.tiangolo.com/#installation
 from fastapi import FastAPI, HTTPException
 from db import get_db_connection
-from models import Usuari, Material, Reserva, LoginRequest
+from models import Usuari, Material, Reserva
 # from fastapi.middleware.cors import CORSMiddleware
 
 import time
@@ -116,10 +116,10 @@ def obtenir_usuari(id: int):
     return usuari
 
 @app.post("/login/")
-def login(login: LoginRequest):
+def login(usuari: Usuari):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id, nom, rol FROM usuaris WHERE nom = %s AND password = %s", (login.nom, login.password))
+    cursor.execute("SELECT id, nom, rol FROM usuaris WHERE nom = %s AND password = %s", (usuari.nom, usuari.password))
     usuari = cursor.fetchone()
     cursor.close()
     conn.close()
