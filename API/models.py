@@ -14,6 +14,10 @@ class Material(BaseModel):
     descripcio: str
     imatge: str
 
+class LoginRequest(BaseModel):
+    nom: str
+    password: str
+
 class Reserva(BaseModel):
     idusuari: int
     idmaterial: int

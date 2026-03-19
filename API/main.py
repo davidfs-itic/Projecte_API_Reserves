@@ -1,7 +1,7 @@
 #https://fastapi.tiangolo.com/#installation
 from fastapi import FastAPI, HTTPException
 from db import get_db_connection
-from models import Usuari, Material, Reserva
+from models import Usuari, Material, Reserva, LoginRequest
 # from fastapi.middleware.cors import CORSMiddleware
 
 import time
@@ -115,16 +115,16 @@ def obtenir_usuari(id: int):
         raise HTTPException(status_code=404, detail="Usuari no trobat")
     return usuari
 
-@app.get("/login/{usuari}")
-def obtenir_usuari(usuari: str):
+@app.post("/login/")
+def login(login: LoginRequest):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id,nom,rol FROM usuaris WHERE nom = %s", (usuari,))    
+    cursor.execute("SELECT id, nom, rol FROM usuaris WHERE nom = %s AND password = %s", (login.nom, login.password))
     usuari = cursor.fetchone()
     cursor.close()
     conn.close()
     if not usuari:
-        raise HTTPException(status_code=404, detail="Usuari no trobat")
+        raise HTTPException(status_code=401, detail="Usuari o password incorrectes")
     return usuari
 
 #1. Afegir Material (POST)
