@@ -1,12 +1,13 @@
 from pydantic import BaseModel
 from datetime import date
+from typing import Optional
 
 
 
 class Usuari(BaseModel):
-    id: int
+    id: Optional[int] = None
     nom: str
-    rol: str
+    rol: Optional[str] = None
     password: str
 
 class Material(BaseModel):
